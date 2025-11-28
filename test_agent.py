@@ -2,7 +2,10 @@ import requests
 import json
 import os
 
-# 1. Load your secrets manually (or ensure they are in .env)
+# Load secrets from .env, don't type them manually
+
+# Configuration
+CLOUD_URL = "https://tamannagarg12-tds-quiz-solver.hf.space"
 # REPLACE THESE WITH YOUR EXACT VALUES FROM YOUR .ENV FILE
 MY_EMAIL = os.getenv("EMAIL")
 MY_SECRET = os.getenv("SECRET") 
@@ -14,16 +17,16 @@ payload = {
     "url": "https://tds-llm-analysis.s-anand.net/demo"
 }
 
-# 3. Send the request to your local server
-print(f"🚀 Sending request to server...")
+print(f"🚀 Sending request to: {CLOUD_URL}/solve")
+
 try:
-    response = requests.post("http://localhost:7860/solve", json=payload)
+    # We use requests.post(..., json=payload) which AUTOMATICALLY fixes JSON formatting errors
+    response = requests.post(f"{CLOUD_URL}/solve", json=payload, timeout=120)
     
-    # 4. Print the result
-    print(f"Status Code: {response.status_code}")
+    print(f"\nStatus Code: {response.status_code}")
     print("Response:")
     print(response.text)
-    
+
 except Exception as e:
-    print(f"❌ Failed to connect: {e}")
+    print(f"❌ Error: {e}")
     print("Make sure 'python main.py' is still running in the other terminal!")
