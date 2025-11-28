@@ -3,7 +3,7 @@ from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
 @tool
-def get_rendered_html(url: str) -> str:
+async def get_rendered_html(url: str) -> str:
     """
     Fetch and return the fully rendered HTML of a webpage.
 
@@ -29,18 +29,20 @@ def get_rendered_html(url: str) -> str:
     # ... existing code ...
     print("\nFetching and rendering:", url)
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-
-            # Load the page (let JS execute)
-            page.goto(url, wait_until="networkidle")
-
-            # Extract rendered HTML
-            content = page.content()
-
-            browser.close()
-            return content
+       async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        
+        # 1. Go to page and wait for network to settle
+        await page.goto(url, wait_until="networkidle", timeout=60000)
+        
+        # 2. Scroll to bottom (triggers lazy loading)
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        await page.wait_for_timeout(2000) # Wait 2s for animations
+        
+        content = await page.content()
+        await browser.close()
+        return content
 
     except Exception as e:
         return f"Error fetching/rendering page: {str(e)}"

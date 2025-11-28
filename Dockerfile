@@ -1,33 +1,32 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
 
-# --- System deps required by Playwright browsers ---
+# 1. Install system tools needed for Playwright & building
 RUN apt-get update && apt-get install -y \
-    wget gnupg ca-certificates curl unzip \
-    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libxkbcommon0 \
-    libgtk-3-0 libgbm1 libasound2 libxcomposite1 libxdamage1 libxrandr2 \
-    libxfixes3 libpango-1.0-0 libcairo2 \
+    wget curl gnupg unzip git \
     && rm -rf /var/lib/apt/lists/*
 
-# --- Install Playwright + Chromium ---
-RUN pip install playwright && playwright install --with-deps chromium
-
-# --- Install uv package manager ---
+# 2. Install uv
 RUN pip install uv
 
-# --- Copy app to container ---
 WORKDIR /app
 
+# 3. Copy dependency files FIRST (for better caching)
+COPY pyproject.toml uv.lock ./
+
+# 4. Install dependencies into the system python (no venv needed for docker)
+RUN uv sync --frozen --system
+
+# 5. NOW install the browsers using the installed package
+# We use 'uv run' to ensure it uses the correct environment
+RUN uv run playwright install chromium --with-deps
+
+# 6. Copy the rest of the code
 COPY . .
 
+# 7. Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONIOENCODING=utf-8
+ENV PORT=7860
 
-# --- Install project dependencies using uv ---
-RUN uv sync --frozen
-
-# HuggingFace Spaces exposes port 7860
-EXPOSE 7860
-
-# --- Run your FastAPI app ---
-# uvicorn must be in pyproject dependencies
-CMD ["uv", "run", "main.py"]
+# 8. Run the app
+# Note: We use 'python' directly because we installed to system
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
