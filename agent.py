@@ -2,7 +2,8 @@ import os
 from typing import TypedDict, Annotated, List, Union
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+# ✅ Switch import to OpenAI
+from langchain_openai import ChatOpenAI
 from tools import (
     get_rendered_html, 
     download_file, 
@@ -15,6 +16,9 @@ from langgraph.prebuilt import ToolNode
 
 load_dotenv()
 
+EMAIL = os.getenv("EMAIL")
+SECRET = os.getenv("SECRET")
+
 # --- 1. Define Tools ---
 tools = [
     get_rendered_html, 
@@ -24,11 +28,11 @@ tools = [
     add_dependencies
 ]
 
-# --- 2. Initialize LLM (Using 2.5 Flash as requested) ---
-# Note: If 2.5 fails again with 404, fallback to "gemini-1.5-flash"
-llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-flash",
-    api_key=os.getenv("GOOGLE_API_KEY"),
+# --- 2. Initialize LLM (Using GPT-4o-mini) ---
+# This model is fast, reliable, and excellent at tool use.
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    api_key=os.getenv("OPENAI_API_KEY"),
     temperature=0
 ).bind_tools(tools)
 
@@ -51,14 +55,13 @@ When asked to solve a quiz, follow these steps:
 # --- 5. Node Functions ---
 
 def call_model(state: AgentState):
-    messages = list(state["messages"]) # Create a copy to avoid mutation issues
+    messages = list(state["messages"])
     
     # Ensure System Prompt is always the first message
     if not messages or not isinstance(messages[0], SystemMessage):
         messages.insert(0, SystemMessage(content=SYSTEM_PROMPT))
     
-    # SAFETY CHECK: If for some reason we only have a SystemMessage, add a dummy HumanMessage
-    # This prevents the "No content messages found" error
+    # Safety Check for empty message list
     if len(messages) == 1 and isinstance(messages[0], SystemMessage):
          messages.append(HumanMessage(content="Please proceed with the task."))
 
@@ -96,5 +99,4 @@ workflow.add_conditional_edges(
 workflow.add_edge("tools", "agent")
 
 # --- 8. COMPILE AND EXPORT ---
-# This object is imported by main.py
 agent = workflow.compile()
