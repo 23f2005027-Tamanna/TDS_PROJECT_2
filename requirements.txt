@@ -81,7 +81,7 @@ playwright
 langchain
 langgraph
 langchain-google-genai
-langchain-openai  <-- ADD THIS
+langchain-openai 
 pandas
 numpy
 matplotlib
