@@ -7,8 +7,6 @@ import os
 
 # ⚠️ CRITICAL IMPORT:
 # We need the compiled 'agent' object directly to use 'await agent.ainvoke'.
-# We try importing 'agent' first. If your agent.py exports 'graph' or 'app',
-# we fall back to importing that as 'agent'.
 try:
     from agent import agent
 except ImportError:
